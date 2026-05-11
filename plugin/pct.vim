@@ -292,7 +292,7 @@ def create_db(dest_path):
 	if dest_path is None:
 		return
 
-	DB = SqliteDatabase(dest_path, threadlocals=True)
+	DB = SqliteDatabase(dest_path, thread_safe=True, pragmas={'foreign_keys': 1})
 
 	class BaseModel(Model):
 		class Meta:
@@ -313,7 +313,7 @@ def create_db(dest_path):
 
 	class Note(BaseModel):
 		path = ForeignKeyField(Path)
-		review = ForeignKeyField(Review)
+		review = ForeignKeyField(Review, backref='notes', on_delete='CASCADE')
 		timestamp = DateTimeField(default=datetime.datetime.now)
 		note = TextField()
 
