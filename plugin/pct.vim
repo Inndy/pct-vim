@@ -67,6 +67,8 @@ if exists('g:loaded_pct') && g:loaded_pct
     finish
 endif
 
+let s:pct_plugin_root = expand('<sfile>:p:h:h')
+
 function! DefinePct()
 python3 <<EOF
 # -*- coding: utf-8 -*-
@@ -80,8 +82,7 @@ import tempfile
 
 import vim
 
-THIS_SCRIPT = vim.eval("expand('<sfile>')")
-PLUGIN_ROOT = os.path.abspath(os.path.join(os.path.dirname(THIS_SCRIPT), ".."))
+PLUGIN_ROOT = os.path.abspath(vim.eval("s:pct_plugin_root"))
 PYTHONX_ROOT = os.path.join(PLUGIN_ROOT, "pythonx")
 if PYTHONX_ROOT not in sys.path:
 	sys.path.insert(0, PYTHONX_ROOT)

@@ -58,8 +58,11 @@ def health(root, host_is_nvim=False):
 
 
 def _run(args, cwd):
-	proc = subprocess.run(args, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-	return proc.returncode, proc.stdout.strip()
+	try:
+		proc = subprocess.run(args, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+		return proc.returncode, proc.stdout.strip()
+	except OSError as e:
+		return 1, "{}: {}".format(type(e).__name__, e)
 
 
 def bootstrap(root, host_is_nvim=False):
