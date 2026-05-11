@@ -104,6 +104,12 @@ def _input(message = 'input'):
 	vim.command('call inputrestore()')
 	return vim.eval('user_input')
 
+def vim_string(value):
+	return "'" + str(value).replace("'", "''") + "'"
+
+def vim_fnameescape(path):
+	return vim.eval("fnameescape({})".format(vim_string(path)))
+
 class Colors:
 	HEADER = '\033[95m'
 	OKBLUE = '\033[94m'
@@ -515,14 +521,14 @@ def show_sign(id, sign_type, line, filename=None, buffer=None):
 	if filename is None:
 		filename = vim.current.buffer.name
 
-	if filename is None and buf is None:
+	if filename is None and buffer is None:
 		filename = vim.current.buffer.name
 
 	which = None
 	if filename is not None:
-		which = "file=" + filename
-	elif buf is not None:
-		which = "buf=" + str(buf)
+		which = "file=" + vim_fnameescape(filename)
+	elif buffer is not None:
+		which = "buffer=" + str(buffer)
 
 	command = "sign place {id} line={line} name={sign_type} {which}".format(
 		id			= id,
@@ -969,7 +975,7 @@ def note_selection(prefix="", prompt="note", multi=False, start=None, end=None):
 			"let b:new_note = 1",
 			"let b:line_start = {start}".format(start=rng.start+1),
 			"let b:line_end = {end}".format(end=rng.end+1),
-			"let b:note_bufname = '{name}'".format(name=name),
+			"let b:note_bufname = " + vim_string(name),
 			"let b:retnr = " + str(winnr())
 		]
 		multi_input(prefix + " ")
@@ -1018,7 +1024,7 @@ def note_current_line(prefix="", prompt="note", multi=False, placeholder=""):
 			"let b:new_note = 1",
 			"let b:line_start = {start}".format(start=line),
 			"let b:line_end = {end}".format(end=line),
-			"let b:note_bufname = '{name}'".format(name=name),
+			"let b:note_bufname = " + vim_string(name),
 			"let b:retnr = " + str(winnr())
 		]
 		multi_input(prefix + " ")
