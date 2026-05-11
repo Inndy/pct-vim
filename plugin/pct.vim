@@ -1061,19 +1061,14 @@ def get_notes_for_line(filename, line):
 	if not file_is_reviewable(filename):
 		return []
 
-	try:
-		all_notes = get_notes(filename)
-		count = 0
-		notes = []
+	all_notes = get_notes(filename)
+	notes = []
 
-		for note in all_notes:
-			start = note.review.line_start
-			end = note.review.line_end
-			if start <= line and end >= line:
-				notes.append(note)
-	except Exception as e:
-		warn("notes exist that aren't tied to a review, deleting them")
-		DB.execute_sql("DELETE FROM note where review not in (SELECT id from review)")
+	for note in all_notes:
+		start = note.review.line_start
+		end = note.review.line_end
+		if start <= line and end >= line:
+			notes.append(note)
 
 	return notes
 
