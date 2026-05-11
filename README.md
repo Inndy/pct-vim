@@ -35,6 +35,11 @@ will be included in reports and are considered "part of the project".
 * Python
 * `peewee` python module (`pip install peewee`)
 
+If you do not want to install Python packages globally, run `:PctBootstrap`.
+It creates a local `.venv` in the plugin directory and installs `peewee`
+there, preferring `uv` when available and falling back to Python's built-in
+`venv` module. Run `:PctHealth` to check dependency status.
+
 ## Key mappings
 
 * Review

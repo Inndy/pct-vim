@@ -80,10 +80,31 @@ import tempfile
 
 import vim
 
+THIS_SCRIPT = vim.eval("expand('<sfile>')")
+PLUGIN_ROOT = os.path.abspath(os.path.join(os.path.dirname(THIS_SCRIPT), ".."))
+PYTHONX_ROOT = os.path.join(PLUGIN_ROOT, "pythonx")
+if PYTHONX_ROOT not in sys.path:
+	sys.path.insert(0, PYTHONX_ROOT)
+
 try:
-	from peewee import *
-except ImportError as e:
-	print("Could not import peewee module, run 'pip install peewee'")
+	import pct_bootstrap
+	pct_bootstrap.add_venv_to_path(PLUGIN_ROOT)
+except ImportError:
+	pct_bootstrap = None
+
+def load_peewee(show_error=True):
+	try:
+		import peewee
+		for name in dir(peewee):
+			if not name.startswith("_"):
+				globals()[name] = getattr(peewee, name)
+		return True
+	except ImportError:
+		if show_error:
+			print("Could not import peewee module, run :PctBootstrap")
+		return False
+
+PCT_PEEWEE_AVAILABLE = load_peewee()
 
 class PctModels:
 	Path = None
@@ -91,7 +112,6 @@ class PctModels:
 	Review = None
 	Scope = None
 
-THIS_SCRIPT = vim.eval("expand('<sfile>')")
 DB = None
 DB_PATH = None
 DB_NAME = "pct.sqlite"
@@ -296,6 +316,8 @@ def create_db(dest_path):
 	global DB
 
 	if dest_path is None:
+		return
+	if not load_peewee():
 		return
 
 	DB = SqliteDatabase(dest_path, thread_safe=True, pragmas={'foreign_keys': 1})
@@ -1312,6 +1334,30 @@ def toggle_audit():
 		vim.command("hi StatusLine cterm=bold ctermfg=black ctermbg=red")
 	else:
 		vim.command("hi StatusLine cterm=bold ctermfg=blue ctermbg=white")
+
+def pct_host_is_nvim():
+	return vim.eval("has('nvim')") == "1"
+
+def pct_print_bootstrap_result(result):
+	ok, messages = result
+	for message in messages:
+		print("[pct] " + message)
+
+def pct_health():
+	if pct_bootstrap is None:
+		err("pct_bootstrap.py not found")
+		return
+	pct_print_bootstrap_result(pct_bootstrap.health(PLUGIN_ROOT, pct_host_is_nvim()))
+
+def pct_bootstrap_deps():
+	global PCT_PEEWEE_AVAILABLE
+	if pct_bootstrap is None:
+		err("pct_bootstrap.py not found")
+		return
+	result = pct_bootstrap.bootstrap(PLUGIN_ROOT, pct_host_is_nvim())
+	pct_print_bootstrap_result(result)
+	ok, messages = result
+	PCT_PEEWEE_AVAILABLE = load_peewee(show_error=not ok)
 EOF
 endfunction
 call DefinePct()
@@ -1389,6 +1435,8 @@ command! -nargs=0 PctReport py3 report()
 command! -nargs=0 PctNotes py3 notes()
 command! -nargs=0 PctAudit py3 toggle_audit()
 command! -nargs=0 PctInit py3 init_db(True)
+command! -nargs=0 PctHealth py3 pct_health()
+command! -nargs=0 PctBootstrap py3 pct_bootstrap_deps()
 
 " always show the status of files
 set laststatus=2
