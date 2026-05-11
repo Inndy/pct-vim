@@ -418,10 +418,10 @@ def add_path(path):
 	path = norm_path(path)
 
 	line_count=0
-	with open(os.path.join(os.path.dirname(DB.database), path)) as f:
+	with open(os.path.join(os.path.dirname(DB.database), path), "rb") as f:
 		data = f.read()
-		line_count = data.count("\n")
-		if data[-1] == "\n":
+		line_count = data.count(b"\n")
+		if data and data[-1] == 10: # 10 is \n
 			line_count -= 1
 
 	new_path = PctModels.Path(path=path, line_count=line_count)
