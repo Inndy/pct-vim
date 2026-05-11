@@ -75,6 +75,7 @@ python3 <<EOF
 from contextlib import contextmanager
 import datetime
 import glob
+import fnmatch
 import os
 import sys
 import sqlite3
@@ -112,10 +113,19 @@ class PctModels:
 	Note = None
 	Review = None
 	Scope = None
+	Ignore = None
 
 DB = None
 DB_PATH = None
 DB_NAME = "pct.sqlite"
+DEFAULT_IGNORE_PATTERNS = [
+	".git/*",
+	".venv/*",
+	"__pycache__/*",
+	"*/__pycache__/*",
+	"node_modules/*",
+	"*/node_modules/*",
+]
 
 SHOW_ANNOTATIONS = True
 
@@ -237,6 +247,55 @@ def norm_path(path):
 	res = reduce_path(res)
 	return res
 
+def slash_path(path):
+	return path.replace(os.path.sep, "/")
+
+def get_ignore_patterns():
+	if DB is None or PctModels.Ignore is None:
+		return DEFAULT_IGNORE_PATTERNS
+	return [ignore.pattern for ignore in PctModels.Ignore.select()]
+
+def require_ignore_table():
+	if DB is None or PctModels.Ignore is None:
+		err("No PCT database loaded, run :PctInit")
+		return False
+	return True
+
+def pct_ignore(pattern):
+	if not require_ignore_table():
+		return
+	PctModels.Ignore.get_or_create(pattern=pattern)
+	ok("ignored " + pattern)
+
+def pct_unignore(pattern):
+	if not require_ignore_table():
+		return
+	count = PctModels.Ignore.delete().where(PctModels.Ignore.pattern == pattern).execute()
+	if count:
+		ok("unignored " + pattern)
+	else:
+		warn("ignore pattern not found: " + pattern)
+
+def pct_ignore_list():
+	if not require_ignore_table():
+		return
+	for pattern in get_ignore_patterns():
+		print(pattern)
+
+def path_is_ignored(path):
+	if DB is None:
+		return False
+	if not isinstance(path, str):
+		rel_path = slash_path(path.path)
+	else:
+		rel_path = slash_path(norm_path(path))
+	for pattern in get_ignore_patterns():
+		if fnmatch.fnmatch(rel_path, pattern):
+			return True
+		if pattern.endswith("/*") and (rel_path == pattern[:-2] or rel_path.startswith(pattern[:-1])):
+			return True
+	return False
+
 def file_is_reviewable(path):
 	"""
 	Return True/False if the file exists and is in the current project,
@@ -261,6 +320,8 @@ def file_is_reviewable(path):
 		return False
 
 	if norm_path(path).startswith(".."):
+		return False
+	if path_is_ignored(path):
 		return False
 
 	return True
@@ -350,19 +411,20 @@ def create_db(dest_path):
 		path = ForeignKeyField(Path)
 		scope_flag = BooleanField()
 
+	class Ignore(BaseModel):
+		pattern = CharField(unique=True)
+		timestamp = DateTimeField(default=datetime.datetime.now)
+
 	PctModels.Path = Path
 	PctModels.Review = Review
 	PctModels.Note = Note
 	PctModels.Scope = Scope
+	PctModels.Ignore = Ignore
 
 	DB.connect()
-	try:
-		DB.create_tables([Path, Review, Note, Scope])
-	except Exception as e:
-		if "already exists" in str(e):
-			pass
-		else:
-			raise
+	DB.create_tables([Path, Review, Note, Scope, Ignore], safe=True)
+	for pattern in DEFAULT_IGNORE_PATTERNS:
+		Ignore.get_or_create(pattern=pattern)
 
 def prompt_for_db_path():
 	warn("Could not find the database, where should it be created?")
@@ -807,6 +869,8 @@ def _report_info():
 
 	existing = {}
 	for path in PctModels.Path.select():
+		if path_is_ignored(path):
+			continue
 		status = get_status(path, filename_max=max_len, raw=True)
 
 		c = status["info"]["coverage"]
@@ -829,6 +893,7 @@ def _report_info():
 	unopened = []
 	d = os.path.join(root_path(), "***")
 	for root, dirnames, filenames in os.walk(root_path()):
+		dirnames[:] = [dirname for dirname in dirnames if not path_is_ignored(os.path.join(root, dirname))]
 		for filename in filenames:
 			proj_file = os.path.join(root, filename)
 			normd_path = norm_path(proj_file)
@@ -1377,6 +1442,14 @@ endfunction
 
 py3 init_db(create=False)
 
+function! PctIgnore(pattern)
+	py3 pct_ignore(vim.eval("a:pattern"))
+endfunction
+
+function! PctUnignore(pattern)
+	py3 pct_unignore(vim.eval("a:pattern"))
+endfunction
+
 " ---------------------------------------------
 " ---------------------------------------------
 
@@ -1438,6 +1511,9 @@ command! -nargs=0 PctAudit py3 toggle_audit()
 command! -nargs=0 PctInit py3 init_db(True)
 command! -nargs=0 PctHealth py3 pct_health()
 command! -nargs=0 PctBootstrap py3 pct_bootstrap_deps()
+command! -nargs=1 PctIgnore call PctIgnore(<q-args>)
+command! -nargs=1 PctUnignore call PctUnignore(<q-args>)
+command! -nargs=0 PctIgnoreList py3 pct_ignore_list()
 
 " always show the status of files
 set laststatus=2

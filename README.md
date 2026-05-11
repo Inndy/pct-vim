@@ -40,6 +40,15 @@ It creates a local `.venv` in the plugin directory and installs `peewee`
 there, preferring `uv` when available and falling back to Python's built-in
 `venv` module. Run `:PctHealth` to check dependency status.
 
+## Ignore patterns
+
+PCT stores project ignore patterns in `pct.sqlite`. New databases seed default
+patterns for `.git`, `.venv`, `__pycache__`, and `node_modules`.
+
+* `:PctIgnore {pattern}` - add an ignore pattern
+* `:PctUnignore {pattern}` - remove an ignore pattern
+* `:PctIgnoreList` - list ignore patterns
+
 ## Key mappings
 
 * Review
