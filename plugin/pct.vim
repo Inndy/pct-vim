@@ -688,6 +688,12 @@ def load_signs_buffer(bufname):
 	unload_signs_buffer(bufname)
 
 	path = get_path(bufname)
+
+	actual_line_count = int(vim.eval("line('$')"))
+	if path.line_count != actual_line_count:
+		path.line_count = actual_line_count
+		path.save()
+
 	reviews = get_reviews(path)
 	notes = get_notes(path)
 
@@ -1555,3 +1561,5 @@ function! MaybeSaveNote()
 endfunction
 
 let g:loaded_pct = 1
+
+" vim: set et! :
