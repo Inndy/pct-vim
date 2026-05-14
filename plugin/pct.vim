@@ -651,7 +651,7 @@ def show_note_signs(note, filename=None):
 		count += 1
 
 def buff_enter():
-	update_status()
+	load_signs_buffer(vim.current.buffer.name)
 
 	# update the report every time it is looked at
 	if vim.current.buffer.name is not None and os.path.basename(vim.current.buffer.name) == report_name:
