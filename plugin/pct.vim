@@ -1271,11 +1271,16 @@ def delete_note_on_line():
 	if len(notes) == 0:
 		return
 
+	def delete_note(note):
+		review = note.review
+		note.delete_instance()
+		if PctModels.Note.select().where(PctModels.Note.review == review).count() == 0:
+			review.delete_instance()
+
 	if len(notes) == 1:
 		choice = _input("Are you sure you want to delete the current note? (y/n)")
 		if choice[0].lower() == "y":
-			notes[0].review.delete_instance()
-			notes[0].delete_instance()
+			delete_note(notes[0])
 			ok("Deleted note")
 			load_signs_buffer(vim.current.buffer.name)
 
@@ -1298,8 +1303,7 @@ def delete_note_on_line():
 			err("Invalid choice")
 			return
 
-		notes[choice].review.delete_instance()
-		notes[choice].delete_instance()
+		delete_note(notes[choice])
 		print("")
 		ok("Deleted note")
 		load_signs_buffer(vim.current.buffer.name)
