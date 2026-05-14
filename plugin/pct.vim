@@ -512,8 +512,8 @@ def add_path(path):
 	with open(os.path.join(os.path.dirname(DB.database), path), "rb") as f:
 		data = f.read()
 		line_count = data.count(b"\n")
-		if data and data[-1] == 10: # 10 is \n
-			line_count -= 1
+		if data and data[-1] != 10: # no trailing newline means last line has no \n
+			line_count += 1
 
 	new_path = PctModels.Path(path=path, line_count=line_count)
 	new_path.save()
@@ -825,7 +825,7 @@ def get_status(path, no_filename=False, filename_max=0, raw=False):
 		if review.line_start == review.line_end:
 			all_lines.add(review.line_start)
 		else:
-			all_lines = all_lines.union(set(range(review.line_start, review.line_end)))
+			all_lines = all_lines.union(set(range(review.line_start, review.line_end + 1)))
 	if finfo["path"].line_count > 0:
 		coverage = len(all_lines) / float(finfo["path"].line_count)
 	else:
